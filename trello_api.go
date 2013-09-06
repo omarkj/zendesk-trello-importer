@@ -12,6 +12,7 @@ import (
 )
 
 // https://trello.com/1/authorize?key=$TRELLO_API_KEY&name=Go%20Zendesk%20Importer&expiration=never&response_type=token&scope=read,write
+// curl -v "https://api.trello.com/1/boards/$TRELLO_BOARD_ID/members?key=$TRELLO_API_KEY&token=$TRELLO_API_TOKEN"
 // curl -v "https://api.trello.com/1/boards/$TRELLO_BOARD_ID/cards?key=$TRELLO_API_KEY&token=$TRELLO_API_TOKEN&lists=open&fields=name,idMembers"
 
 type TrelloList struct {
@@ -101,6 +102,12 @@ func create_trello_card(id int64, status string, desc string, listId string) (*T
 func update_trello_card_name(cardId string, cardName string) (error) {
   path := fmt.Sprintf("/1/cards/%s/name?key=%s&token=%s", cardId, trello_api_key, trello_api_token)
   _, err := trello_api_method("PUT", path, url.Values{"value": {cardName}})
+  return err
+}
+
+func delete_trello_card(cardId string) (error) {
+  path := fmt.Sprintf("/1/cards/%s/closed?key=%s&token=%s", cardId, trello_api_key, trello_api_token)
+  _, err := trello_api_method("PUT", path, url.Values{"value": {"true"}})
   return err
 }
 

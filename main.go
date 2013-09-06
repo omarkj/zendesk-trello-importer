@@ -35,6 +35,15 @@ func main() {
     maybe_update_title(card, ticket_wrapper.Ticket.Id, ticket_wrapper.Ticket.Status)
     maybe_assign_trello_board_member(card, ticket_wrapper.Assignee_Id)
   }
+
+  // loop through trello cards
+  re := regexp.MustCompile("Ticket #(\\d+) .*")
+  for _, card := range trello_cards {
+    matches := re.FindStringSubmatch(card.Name)
+    if len(matches) == 2 {
+      maybe_delete_stale_card(&card, matches[1])
+    }
+  }
 }
 
 func fetch_content_from_apis() {
@@ -78,3 +87,12 @@ func maybe_assign_trello_board_member(card *TrelloCard, assigneeId int64) {
 
 }
 
+func maybe_delete_stale_card(card *TrelloCard, ticket_id string) {
+  for _, wrapper := range zendesk_view_tickets.Rows {
+    if ticket_id == fmt.Sprintf("%d", wrapper.Ticket.Id) {
+      return
+    }
+    fmt.Println("delete card for Ticket #", ticket_id)
+    delete_trello_card(card.Id)
+  }
+}
