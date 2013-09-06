@@ -15,8 +15,7 @@ heroku config:add \
 ```
 heroku config:add \
   TRELLO_API_KEY=... \
-  TRELLO_ACCESS_TOKEN_KEY=... \
-  TRELLO_OAUTH_SECRET=... \
+  TRELLO_API_TOKEN=... \
   TRELLO_BOARD_ID=... \
   TRELLO_LIST="Support Tickets"
 ```
