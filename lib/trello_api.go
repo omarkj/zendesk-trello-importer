@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
   "os"
@@ -37,12 +37,9 @@ var trello_api_token string = os.Getenv("TRELLO_API_TOKEN")
 var trello_board_id string = os.Getenv("TRELLO_BOARD_ID")
 var trello_list string = os.Getenv("TRELLO_LIST")
 
-var trello_lists []TrelloList
-var trello_members []TrelloMember
-var trello_cards []TrelloCard
 
-func get_trello_list_id() string {
-  for _, list := range trello_lists {
+func Get_trello_list_id(trello_lists *[]TrelloList) string {
+  for _, list := range *trello_lists {
     if list.Name == trello_list {
       return list.Id
     }
@@ -50,9 +47,9 @@ func get_trello_list_id() string {
   return ""
 }
 
-func fetch_trello_board_cards(done chan error) {
+func Fetch_trello_board_cards(client *http.Client, trello_cards *[]TrelloCard, done chan error) {
   path := fmt.Sprintf("/1/boards/%s/cards?key=%s&token=%s&lists=open&fields=name,idMembers", trello_board_id, trello_api_key, trello_api_token)
-  content, err := trello_api_method("GET", path, nil)
+  content, err := trello_api_method(client, "GET", path, nil)
   if err != nil {
     done <- err
     return
@@ -61,9 +58,9 @@ func fetch_trello_board_cards(done chan error) {
   done <- err
 }
 
-func fetch_trello_board_members(done chan error) {
+func Fetch_trello_board_members(client *http.Client, trello_members *[]TrelloMember, done chan error) {
   path := fmt.Sprintf("/1/boards/%s/members?key=%s&token=%s", trello_board_id, trello_api_key, trello_api_token)
-  content, err := trello_api_method("GET", path, nil)
+  content, err := trello_api_method(client, "GET", path, nil)
   if err != nil {
     done <- err
     return
@@ -72,9 +69,9 @@ func fetch_trello_board_members(done chan error) {
   done <- err
 }
 
-func fetch_trello_board_lists(done chan error) {
+func Fetch_trello_board_lists(client *http.Client, trello_lists *[]TrelloList, done chan error) {
   path := fmt.Sprintf("/1/boards/%s/lists?key=%s&token=%s&fields=name", trello_board_id, trello_api_key, trello_api_token)
-  content, err := trello_api_method("GET", path, nil)
+  content, err := trello_api_method(client, "GET", path, nil)
   if err != nil {
     done <- err
     return
@@ -83,12 +80,12 @@ func fetch_trello_board_lists(done chan error) {
   done <- err
 }
 
-func create_trello_card(id int64, status string, desc string, listId string) (*TrelloCard, error) {
+func Create_trello_card(client *http.Client, id int64, status string, desc string, listId string) (*TrelloCard, error) {
   name := fmt.Sprintf("Ticket #%d (%s)", id, status)
   card := TrelloCard{Name: name}
   path := fmt.Sprintf("/1/cards?key=%s&token=%s", trello_api_key, trello_api_token)
   params := url.Values{"idList": {listId}, "name": {name}, "desc": {desc}}
-  content, err := trello_api_method("POST", path, params)
+  content, err := trello_api_method(client, "POST", path, params)
   if err != nil {
     return nil, err
   }
@@ -99,19 +96,19 @@ func create_trello_card(id int64, status string, desc string, listId string) (*T
   return &card, nil
 }
 
-func update_trello_card_name(cardId string, cardName string) (error) {
+func Update_trello_card_name(client *http.Client, cardId string, cardName string) (error) {
   path := fmt.Sprintf("/1/cards/%s/name?key=%s&token=%s", cardId, trello_api_key, trello_api_token)
-  _, err := trello_api_method("PUT", path, url.Values{"value": {cardName}})
+  _, err := trello_api_method(client, "PUT", path, url.Values{"value": {cardName}})
   return err
 }
 
-func delete_trello_card(cardId string) (error) {
+func Delete_trello_card(client *http.Client, cardId string) (error) {
   path := fmt.Sprintf("/1/cards/%s/closed?key=%s&token=%s", cardId, trello_api_key, trello_api_token)
-  _, err := trello_api_method("PUT", path, url.Values{"value": {"true"}})
+  _, err := trello_api_method(client, "PUT", path, url.Values{"value": {"true"}})
   return err
 }
 
-func trello_api_method(method string, path string, params url.Values) ([]byte, error) {
+func trello_api_method(client *http.Client, method string, path string, params url.Values) ([]byte, error) {
   url := fmt.Sprintf("%s%s", trello_api_host, path)
   var form io.Reader = nil
   if params != nil {

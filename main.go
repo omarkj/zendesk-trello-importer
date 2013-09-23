@@ -4,9 +4,17 @@ import (
   "fmt"
   "regexp"
   "net/http"
+  "github.com/JacobVorreuter/zendesk-trello-importer/lib"
 )
 
 var client = &http.Client{}
+
+var trello_lists []lib.TrelloList
+var trello_members []lib.TrelloMember
+var trello_cards []lib.TrelloCard
+
+var zendesk_users lib.ZendeskUsers
+var zendesk_view_tickets lib.ZendeskView
 
 func main() {
   fmt.Println("refreshing data...")
@@ -22,11 +30,12 @@ func main() {
     } else {
       fmt.Println("creating trello card for ticket #", ticket_wrapper.Ticket.Id)
       var err error
-      desc := fmt.Sprintf("%s/tickets/%d\r\n\r\n%s", zendesk_url, ticket_wrapper.Ticket.Id, ticket_wrapper.Ticket.Description)
-      card, err = create_trello_card(ticket_wrapper.Ticket.Id,
-                                     ticket_wrapper.Ticket.Status,
-                                     desc,
-                                     get_trello_list_id())
+      desc := lib.Format_zendesk_desc(ticket_wrapper.Ticket.Id, ticket_wrapper.Ticket.Description)
+      card, err = lib.Create_trello_card(client,
+                                         ticket_wrapper.Ticket.Id,
+                                         ticket_wrapper.Ticket.Status,
+                                         desc,
+                                         lib.Get_trello_list_id(&trello_lists))
       if err != nil {
         fmt.Println("\nerr: ", err)
         return
@@ -49,11 +58,11 @@ func main() {
 func fetch_content_from_apis() {
   done := make(chan error)
 
-  go fetch_trello_board_lists(done)
-  go fetch_trello_board_members(done)
-  go fetch_trello_board_cards(done)
-  go fetch_zendesk_users(done)
-  go fetch_zendesk_view_tickets(done)
+  go lib.Fetch_trello_board_lists(client, &trello_lists, done)
+  go lib.Fetch_trello_board_members(client, &trello_members, done)
+  go lib.Fetch_trello_board_cards(client, &trello_cards, done)
+  go lib.Fetch_zendesk_users(client, &zendesk_users, done)
+  go lib.Fetch_zendesk_view_tickets(client, &zendesk_view_tickets, done)
 
   // wait for API calls to finish
   for i := 0; i < 5; i++ {
@@ -65,7 +74,7 @@ func fetch_content_from_apis() {
   }
 }
 
-func match_trello_card_from_zendesk_id(id int64) *TrelloCard {
+func match_trello_card_from_zendesk_id(id int64) *lib.TrelloCard {
   for _, card := range trello_cards {
     match, _ := regexp.MatchString(fmt.Sprintf("Ticket #%d.*", id), card.Name)
     if match {
@@ -75,24 +84,24 @@ func match_trello_card_from_zendesk_id(id int64) *TrelloCard {
   return nil
 }
 
-func maybe_update_title(card *TrelloCard, id int64, status string) {
+func maybe_update_title(card *lib.TrelloCard, id int64, status string) {
   newName := fmt.Sprintf("Ticket #%d (%s)", id, status)
   if card.Name != newName {
     fmt.Println("update name")
-    update_trello_card_name(card.Id, newName) 
+    lib.Update_trello_card_name(client, card.Id, newName) 
   } 
 }
 
-func maybe_assign_trello_board_member(card *TrelloCard, assigneeId int64) {
+func maybe_assign_trello_board_member(card *lib.TrelloCard, assigneeId int64) {
 
 }
 
-func maybe_delete_stale_card(card *TrelloCard, ticket_id string) {
+func maybe_delete_stale_card(card *lib.TrelloCard, ticket_id string) {
   for _, wrapper := range zendesk_view_tickets.Rows {
     if ticket_id == fmt.Sprintf("%d", wrapper.Ticket.Id) {
       return
     }
-    fmt.Println("delete card for Ticket #", ticket_id)
-    delete_trello_card(card.Id)
   }
+  fmt.Println("delete card for Ticket #", ticket_id)
+  lib.Delete_trello_card(client, card.Id)
 }

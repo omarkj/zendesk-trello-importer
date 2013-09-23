@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
   "os"
@@ -44,12 +44,10 @@ var zendesk_group_id = os.Getenv("ZENDESK_GROUP_ID")
 var zendesk_view = os.Getenv("ZENDESK_VIEW")
 var zendesk_dummy_acct = os.Getenv("ZENDESK_DUMMY_ACCT")
 
-var zendesk_users ZendeskUsers
-var zendesk_view_tickets ZendeskView
 
-func fetch_zendesk_users(done chan error) {
+func Fetch_zendesk_users(client *http.Client, zendesk_users *ZendeskUsers, done chan error) {
   path := fmt.Sprintf("%s/api/v2/groups/%s/users.json", zendesk_url, zendesk_group_id)
-  content, err := zendesk_api_get(path)
+  content, err := zendesk_api_get(client, path)
   if err != nil {
     done <- err
     return
@@ -58,9 +56,9 @@ func fetch_zendesk_users(done chan error) {
   done <- err
 }
 
-func fetch_zendesk_view_tickets(done chan error) {
+func Fetch_zendesk_view_tickets(client *http.Client, zendesk_view_tickets *ZendeskView, done chan error) {
   path := fmt.Sprintf("%s/api/v2/views/%s/execute.json", zendesk_url, zendesk_view)
-  content, err := zendesk_api_get(path)
+  content, err := zendesk_api_get(client, path)
   if err != nil {
     done <- err
     return
@@ -69,7 +67,11 @@ func fetch_zendesk_view_tickets(done chan error) {
   done <- err
 }
 
-func zendesk_api_get(path string) ([]byte, error) {
+func Format_zendesk_desc(id int64, desc string) string {
+    return fmt.Sprintf("%s/tickets/%d\r\n\r\n%s", zendesk_url, id, desc)
+}
+
+func zendesk_api_get(client *http.Client, path string) ([]byte, error) {
   req, err := http.NewRequest("GET", path, nil)
   req.SetBasicAuth(fmt.Sprintf("%s/token", zendesk_username), zendesk_token)
   resp, err := client.Do(req)
