@@ -25,3 +25,5 @@ heroku config:add \
   PAGERDUTY_API_KEY=... \
   PAGERDUTY_ROTATION_IDS=..`.
 ```
+
+(Grant access to Go Zendesk Importer application)[https://trello.com/1/authorize?key=YOURKEYGOESHERE&name=Go%20Zendesk%20Importer&expiration=never&response_type=token&scope=read,write]
