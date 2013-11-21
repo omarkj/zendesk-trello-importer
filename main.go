@@ -7,12 +7,15 @@ import (
   "github.com/JacobVorreuter/zendesk-trello-importer/lib"
 )
 
+// HTTP client
 var client = &http.Client{}
 
+// global trello objects
 var trello_lists []lib.TrelloList
 var trello_members []lib.TrelloMember
 var trello_cards []lib.TrelloCard
 
+// global zendesk objects
 var zendesk_users lib.ZendeskUsers
 var zendesk_view_tickets lib.ZendeskView
 
@@ -55,6 +58,8 @@ func main() {
   }
 }
 
+// asynchronously populate global objects
+// through trello and zendesk REST APIs
 func fetch_content_from_apis() {
   done := make(chan error)
 

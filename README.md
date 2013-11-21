@@ -19,3 +19,9 @@ heroku config:add \
   TRELLO_BOARD_ID=... \
   TRELLO_LIST="Support Tickets"
 ```
+
+```
+heroku config:add \
+  PAGERDUTY_API_KEY=... \
+  PAGERDUTY_ROTATION_IDS=..`.
+```
