@@ -11,6 +11,7 @@ func runAsImporter() {
   // instantiate Trello and Zendesk objects
   trello := Trello{}
   zendesk := Zendesk{}
+  pagerduty := Pagerduty{}
 
   err := trello.populateState()
   if (err!=nil) {
@@ -20,6 +21,11 @@ func runAsImporter() {
   err = zendesk.populateState()
   if (err!=nil) {
     fmt.Println("Failed fetching Zendesk state:", err)
+  }
+
+  err = pagerduty.populateState()
+  if (err!=nil) {
+    fmt.Println("Failed fetching PagerDuty state:", err)
   }
 
   fmt.Println("syncing tickets...")

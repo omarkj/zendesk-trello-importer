@@ -8,12 +8,12 @@ import (
   "encoding/json"
 )
 
-var token string = os.Getenv("ZENDESK_TOKEN")
-var apiUrl string = os.Getenv("ZENDESK_URL")
-var username = os.Getenv("ZENDESK_USERNAME")
-var groupId = os.Getenv("ZENDESK_GROUP_ID")
-var view = os.Getenv("ZENDESK_VIEW")
-var dummyAcct = os.Getenv("ZENDESK_DUMMY_ACCT")
+var zendeskToken string = os.Getenv("ZENDESK_TOKEN")
+var zendeskApiUrl string = os.Getenv("ZENDESK_URL")
+var zendeskUsername = os.Getenv("ZENDESK_USERNAME")
+var zendeskGroupId = os.Getenv("ZENDESK_GROUP_ID")
+var zendeskView = os.Getenv("ZENDESK_VIEW")
+var zendeskDummyAcct = os.Getenv("ZENDESK_DUMMY_ACCT")
 
 type ZendeskUser struct {
   Id int64
@@ -66,8 +66,8 @@ func (z *Zendesk) populateState() (error) {
 
 func (z *Zendesk) asyncFetchUsers(done chan error) {
   go func(){
-    path := fmt.Sprintf("%s/api/v2/groups/%s/users.json", apiUrl, groupId)
-    content, err := apiGet(path)
+    path := fmt.Sprintf("%s/api/v2/groups/%s/users.json", zendeskApiUrl, zendeskGroupId)
+    content, err := zendeskApiGet(path)
     if err != nil {
       done <- err
       return
@@ -85,8 +85,8 @@ func (z *Zendesk) asyncFetchUsers(done chan error) {
 
 func (z *Zendesk) asyncFetchTickets(done chan error) {
   go func(){
-    path := fmt.Sprintf("%s/api/v2/views/%s/execute.json", apiUrl, view)
-    content, err := apiGet(path)
+    path := fmt.Sprintf("%s/api/v2/views/%s/execute.json", zendeskApiUrl, zendeskView)
+    content, err := zendeskApiGet(path)
     if err != nil {
       done <- err
       return
@@ -104,13 +104,13 @@ func (z *Zendesk) asyncFetchTickets(done chan error) {
 }
 
 func (z *Zendesk) formatCardDesc(id int64, desc string) string {
-  return fmt.Sprintf("%s/tickets/%d\r\n\r\n%s", apiUrl, id, desc)
+  return fmt.Sprintf("%s/tickets/%d\r\n\r\n%s", zendeskApiUrl, id, desc)
 }
 
-func apiGet(path string) ([]byte, error) {
+func zendeskApiGet(path string) ([]byte, error) {
   var client = http.Client{}
   req, err := http.NewRequest("GET", path, nil)
-  req.SetBasicAuth(fmt.Sprintf("%s/token", username), token)
+  req.SetBasicAuth(fmt.Sprintf("%s/token", zendeskUsername), zendeskToken)
   resp, err := client.Do(req)
   if err != nil {
     return nil, err
