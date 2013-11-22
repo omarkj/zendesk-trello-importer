@@ -32,7 +32,7 @@ func main() {
     } else {
       fmt.Println("creating trello card for ticket #", ticket.Id)
       desc := zendesk.formatCardDesc(ticket.Id, ticket.Description)
-      err = trello.createCard(ticket.Id, ticket.Status, desc)
+      card, err = trello.createCard(ticket.Id, ticket.Status, desc)
       if err != nil {
         fmt.Println("Failed to create Trello card:", err)
         return

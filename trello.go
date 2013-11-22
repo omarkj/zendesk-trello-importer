@@ -97,22 +97,22 @@ func (t *Trello) asyncFetchCards(done chan error) {
   }()
 }
 
-func (t *Trello) createCard(id int64, status string, desc string) (error) {
+func (t *Trello) createCard(id int64, status string, desc string) (*TrelloCard, error) {
   name := fmt.Sprintf("Ticket #%d (%s)", id, status)
-  card := TrelloCard{Name: name}
+  card := &TrelloCard{Name: name}
   path := fmt.Sprintf("/1/cards?key=%s&token=%s", apiKey, apiToken)
   listId := t.targetList()
   params := url.Values{"idList": {listId}, "name": {name}, "desc": {desc}}
   content, err := apiCall("POST", path, params)
   if err != nil {
-    return err
+    return nil, err
   }
   err = json.Unmarshal(content, &card)
   if err != nil {
-    return err
+    return nil, err
   }
-  t.Cards = append(t.Cards, card)
-  return nil
+  t.Cards = append(t.Cards, *card)
+  return card, nil
 }
 
 // TODO: update card name in state
