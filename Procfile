@@ -1,2 +1,2 @@
-web: web
-importer: zendesk-trello-importer
+web: zendesk-trello-importer -webserver
+importer: zendesk-trello-importer -importer
