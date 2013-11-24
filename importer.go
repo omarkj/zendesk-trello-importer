@@ -8,24 +8,27 @@ import (
 func runAsImporter() {
   fmt.Println("fetching content...")
 
-  // instantiate Trello and Zendesk objects
+  var err error
   trello := Trello{}
   zendesk := Zendesk{}
   pagerduty := Pagerduty{}
 
-  err := trello.populateState()
+  err = trello.populateState()
   if (err!=nil) {
-    fmt.Println("Failed fetching Trello state:", err)
+    fmt.Println("failed fetching Trello state:", err)
+    return
   }
 
   err = zendesk.populateState()
   if (err!=nil) {
     fmt.Println("Failed fetching Zendesk state:", err)
+    return
   }
 
   err = pagerduty.populateState()
   if (err!=nil) {
     fmt.Println("Failed fetching PagerDuty state:", err)
+    return
   }
 
   fmt.Println("syncing tickets...")
@@ -45,7 +48,7 @@ func runAsImporter() {
       }
     }
     maybeUpdateCardTitle(&trello, card, ticket.Id, ticket.Status)
-    maybeAssignCardOwner(card, ticket.Assignee_Id)
+    maybeAssignCardOwner(&trello, &zendesk, card, ticket.Assignee_Id)
   }
 
   // loop through trello cards
@@ -76,8 +79,23 @@ func maybeUpdateCardTitle(trello *Trello, card *TrelloCard, id int64, status str
   }
 }
 
-func maybeAssignCardOwner(card *TrelloCard, assigneeId int64) {
-
+func maybeAssignCardOwner(trello *Trello, zendesk * Zendesk, card *TrelloCard, assigneeId int64) {
+  zendeskUser := zendesk.findUser(assigneeId)
+  if zendeskUser != nil {
+    // lookup user mapping in redis
+    user, err := findUserByEmail(zendeskUser.Email)
+    if err != nil {
+      return
+    }
+    trelloMember := trello.findMember(user.TrelloUsername)
+    if trelloMember != nil {
+      // assign trello member to card 
+      err = trello.assignMember(card.Id, trelloMember.Id)
+      if err != nil {
+        return
+      }
+    }
+  }
 }
 
 func maybeDeleteStaleCard(trello *Trello, zendesk *Zendesk, cardId string, ticketId string) {

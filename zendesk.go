@@ -107,6 +107,15 @@ func (z *Zendesk) formatCardDesc(id int64, desc string) string {
   return fmt.Sprintf("%s/tickets/%d\r\n\r\n%s", zendeskApiUrl, id, desc)
 }
 
+func (z *Zendesk) findUser(id int64) *ZendeskUser {
+  for _, user := range z.Users {
+    if user.Id == id {
+      return &user
+    }
+  }
+  return nil
+}
+
 func zendeskApiGet(path string) ([]byte, error) {
   var client = http.Client{}
   req, err := http.NewRequest("GET", path, nil)

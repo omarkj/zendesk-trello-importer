@@ -97,6 +97,15 @@ func (t *Trello) asyncFetchCards(done chan error) {
   }()
 }
 
+func (t *Trello) findMember(username string) (*TrelloMember) {
+  for _, m := range t.Members {
+    if m.Username == username {
+      return &m
+    }
+  }
+  return nil
+}
+
 func (t *Trello) createCard(id int64, status string, desc string) (*TrelloCard, error) {
   name := fmt.Sprintf("Ticket #%d (%s)", id, status)
   card := &TrelloCard{Name: name}
@@ -125,6 +134,12 @@ func (t *Trello) updateCardName(cardId string, cardName string) (error) {
 func (t *Trello) deleteCard(cardId string) (error) {
   path := fmt.Sprintf("/1/cards/%s/closed?key=%s&token=%s", cardId, trelloApiKey, trelloApiToken)
   _, err := apiCall("PUT", path, url.Values{"value": {"true"}})
+  return err
+}
+
+func (t *Trello) assignMember(cardId string, memberId string) (error) {
+  path := fmt.Sprintf("/1/cards/%s/idMembers?key=%s&token=%s", cardId, trelloApiKey, trelloApiToken)
+  _, err := apiCall("PUT", path, url.Values{"value": {memberId}})
   return err
 }
 
