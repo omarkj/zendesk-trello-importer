@@ -48,7 +48,7 @@ func runAsImporter() {
       }
     }
     maybeUpdateCardTitle(&trello, card, ticket.Id, ticket.Status)
-    maybeAssignCardOwner(&trello, &zendesk, card, ticket.Assignee_Id)
+    maybeAssignCardOwner(&trello, &zendesk, &pagerduty, card, ticket.Assignee_Id)
   }
 
   // loop through trello cards
@@ -79,22 +79,45 @@ func maybeUpdateCardTitle(trello *Trello, card *TrelloCard, id int64, status str
   }
 }
 
-func maybeAssignCardOwner(trello *Trello, zendesk * Zendesk, card *TrelloCard, assigneeId int64) {
+func maybeAssignCardOwner(trello *Trello, zendesk *Zendesk, pagerduty *Pagerduty, card *TrelloCard, assigneeId int64) {
+  if assigneeId > 0 {
+    assignExistingOwnerToCard(trello, zendesk, card, assigneeId)
+  } else {
+    assignNewOwnerToCard(trello, pagerduty, card)
+  }
+}
+
+func assignExistingOwnerToCard(trello *Trello, zendesk *Zendesk, card *TrelloCard, assigneeId int64) {
   zendeskUser := zendesk.findUser(assigneeId)
   if zendeskUser != nil {
     // lookup user mapping in redis
     user, err := findUserByEmail(zendeskUser.Email)
-    if err != nil {
-      return
-    }
+    if err != nil { panic(err) }
     trelloMember := trello.findMember(user.TrelloUsername)
     if trelloMember != nil {
       // assign trello member to card 
       err = trello.assignMember(card.Id, trelloMember.Id)
-      if err != nil {
-        return
-      }
+      if err != nil { panic(err) }
     }
+  }
+}
+
+// card is unassigned
+// select least recently active member of on-call rotation
+func assignNewOwnerToCard(trello *Trello, pagerduty *Pagerduty, card *TrelloCard) {
+  var assignee User
+  for _, pagerdutyUser := range pagerduty.OnCall {
+    user, err := findUserByEmail(pagerdutyUser.Email)
+    if err != nil { panic(err) }
+    if (assignee.Email == "" || user.LastAssignmentTime < assignee.LastAssignmentTime) {
+      assignee = *user
+    }
+  }
+  trelloMember := trello.findMember(assignee.TrelloUsername)
+  if trelloMember != nil {
+    // assign trello member to card 
+    err := trello.assignMember(card.Id, trelloMember.Id)
+    if err != nil { panic(err) }
   }
 }
 
