@@ -8,28 +8,13 @@ import (
 func runAsImporter() {
   fmt.Println("fetching content...")
 
-  var err error
   trello := Trello{}
   zendesk := Zendesk{}
   pagerduty := Pagerduty{}
 
-  err = trello.populateState()
-  if (err!=nil) {
-    fmt.Println("failed fetching Trello state:", err)
-    return
-  }
-
-  err = zendesk.populateState()
-  if (err!=nil) {
-    fmt.Println("Failed fetching Zendesk state:", err)
-    return
-  }
-
-  err = pagerduty.populateState()
-  if (err!=nil) {
-    fmt.Println("Failed fetching PagerDuty state:", err)
-    return
-  }
+  trello.populateState()
+  zendesk.populateState()
+  pagerduty.populateState()
 
   fmt.Println("syncing tickets...")
 
@@ -41,11 +26,7 @@ func runAsImporter() {
     } else {
       fmt.Println("creating trello card for ticket #", ticket.Id)
       desc := zendesk.formatCardDesc(ticket.Id, ticket.Description)
-      card, err = trello.createCard(ticket.Id, ticket.Status, desc)
-      if err != nil {
-        fmt.Println("Failed to create Trello card:", err)
-        return
-      }
+      card = trello.createCard(ticket.Id, ticket.Status, desc)
     }
     maybeUpdateCardTitle(&trello, card, ticket.Id, ticket.Status)
     maybeAssignCardOwner(&trello, &zendesk, &pagerduty, card, ticket.Assignee_Id)
@@ -91,15 +72,17 @@ func assignExistingOwnerToCard(trello *Trello, zendesk *Zendesk, card *TrelloCar
   zendeskUser := zendesk.findUser(assigneeId)
   if zendeskUser != nil {
     // lookup user mapping in redis
-    user, err := findUserByEmail(zendeskUser.Email)
-    if err != nil { panic(err) }
+    user := findUserByEmail(zendeskUser.Email)
     trelloMember := trello.findMember(user.TrelloUsername)
-    if trelloMember != nil {
+    if (trelloMember != nil && !trelloCardOwnerMatches(card, trelloMember)) {
       // assign trello member to card 
-      err = trello.assignMember(card.Id, trelloMember.Id)
-      if err != nil { panic(err) }
+      trello.assignMember(card.Id, trelloMember.Id)
     }
   }
+}
+
+func trelloCardOwnerMatches(card *TrelloCard, trelloMember *TrelloMember) bool {
+  return (len(card.IdMembers) == 1 && card.IdMembers[0] == trelloMember.Id)
 }
 
 // card is unassigned
@@ -107,8 +90,7 @@ func assignExistingOwnerToCard(trello *Trello, zendesk *Zendesk, card *TrelloCar
 func assignNewOwnerToCard(trello *Trello, pagerduty *Pagerduty, card *TrelloCard) {
   var assignee User
   for _, pagerdutyUser := range pagerduty.OnCall {
-    user, err := findUserByEmail(pagerdutyUser.Email)
-    if err != nil { panic(err) }
+    user := findUserByEmail(pagerdutyUser.Email)
     if (assignee.Email == "" || user.LastAssignmentTime < assignee.LastAssignmentTime) {
       assignee = *user
     }
@@ -116,8 +98,7 @@ func assignNewOwnerToCard(trello *Trello, pagerduty *Pagerduty, card *TrelloCard
   trelloMember := trello.findMember(assignee.TrelloUsername)
   if trelloMember != nil {
     // assign trello member to card 
-    err := trello.assignMember(card.Id, trelloMember.Id)
-    if err != nil { panic(err) }
+    trello.assignMember(card.Id, trelloMember.Id)
   }
 }
 

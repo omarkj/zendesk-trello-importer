@@ -48,58 +48,42 @@ type Zendesk struct {
 
 // blocking function that fetches users and tickets
 // through asynchronous REST API calls
-func (z *Zendesk) populateState() (error) {
-  done := make(chan error)
+func (z *Zendesk) populateState() {
+  done := make(chan bool)
 
   z.asyncFetchUsers(done)
   z.asyncFetchTickets(done)
 
   // wait for API calls to finish
-  for i := 0; i < 2; i++ {
-    err := <-done
-    if err != nil {
-      return err
-    }
-  }
-  return nil
+  for i := 0; i < 2; i++ { <-done }
 } 
 
-func (z *Zendesk) asyncFetchUsers(done chan error) {
+func (z *Zendesk) asyncFetchUsers(done chan bool) {
   go func(){
     path := fmt.Sprintf("%s/api/v2/groups/%s/users.json", zendeskApiUrl, zendeskGroupId)
-    content, err := zendeskApiGet(path)
-    if err != nil {
-      done <- err
-      return
-    }
+    content := zendeskApiGet(path)
     wrapper := ZendeskUsers{}
-    err = json.Unmarshal(content, &wrapper)
-    if err == nil {
-      for _, user := range wrapper.Users {
-        z.Users = append(z.Users, user)
-      }
+    err := json.Unmarshal(content, &wrapper)
+    if err != nil { panic(err) }
+    for _, user := range wrapper.Users {
+      z.Users = append(z.Users, user)
     }
-    done <- err
+    done <- true
   }()
 }
 
-func (z *Zendesk) asyncFetchTickets(done chan error) {
+func (z *Zendesk) asyncFetchTickets(done chan bool) {
   go func(){
     path := fmt.Sprintf("%s/api/v2/views/%s/execute.json", zendeskApiUrl, zendeskView)
-    content, err := zendeskApiGet(path)
-    if err != nil {
-      done <- err
-      return
-    }
+    content := zendeskApiGet(path)
     wrapper := ZendeskView{}
-    err = json.Unmarshal(content, &wrapper)
-    if err == nil {
-      for _, ticketWrapper := range wrapper.Rows {
-        ticketWrapper.Ticket.Assignee_Id = ticketWrapper.Assignee_Id
-        z.Tickets = append(z.Tickets, ticketWrapper.Ticket)
-      }
+    err := json.Unmarshal(content, &wrapper)
+    if err != nil { panic(err) }
+    for _, ticketWrapper := range wrapper.Rows {
+      ticketWrapper.Ticket.Assignee_Id = ticketWrapper.Assignee_Id
+      z.Tickets = append(z.Tickets, ticketWrapper.Ticket)
     }
-    done <- err
+    done <- true
   }()
 }
 
@@ -116,18 +100,14 @@ func (z *Zendesk) findUser(id int64) *ZendeskUser {
   return nil
 }
 
-func zendeskApiGet(path string) ([]byte, error) {
+func zendeskApiGet(path string) ([]byte) {
   var client = http.Client{}
   req, err := http.NewRequest("GET", path, nil)
   req.SetBasicAuth(fmt.Sprintf("%s/token", zendeskUsername), zendeskToken)
   resp, err := client.Do(req)
-  if err != nil {
-    return nil, err
-  }
+  if err != nil { panic(err) }
   defer resp.Body.Close()
   body, err := ioutil.ReadAll(resp.Body)
-  if err != nil {
-    return nil, err
-  }
-  return body, nil
+  if err != nil { panic(err) }
+  return body
 }

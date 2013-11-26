@@ -2,7 +2,6 @@ package main
 
 import (
   "flag"
-  "log"
 )
 
 func main() {
@@ -12,7 +11,7 @@ func main() {
   flag.Parse()
 
   if !(importer || webserver) || (importer && webserver) {
-    log.Fatal("must specify either -importer, -webserver")
+    panic("must specify either -importer, -webserver")
   }
 
   if importer {

@@ -17,23 +17,19 @@ type User struct {
   LastAssignmentTime string
 }
 
-func findAllUsers() ([]User, error) {
-  conn, err := getConn()
-  if err != nil {
-    return nil, err
-  }
+func findAllUsers() ([]User) {
+  conn := getConn()
   defer conn.Close()
-  var keys []string
-  keys, err = redis.Strings(conn.Do("KEYS", "*"))
+  keys, err := redis.Strings(conn.Do("KEYS", "*"))
   if err != nil {
-    return nil, err
+    panic(err)
   }
   var users = []User{}
   for _, key := range keys {
     var f []string
     f, err = redis.Strings(conn.Do("HGETALL", key))
     if err != nil {
-      return nil, err
+      panic(err)
     }
     user := User{Email:key}
     for i, v := range f {
@@ -46,66 +42,48 @@ func findAllUsers() ([]User, error) {
     }
     users = append(users, user)
   } 
-  return users, nil
+  return users
 }
 
-func findUserByEmail(email string) (*User, error) {
-  users, err := findAllUsers()
-  if err != nil {
-    return nil, err
-  }
+func findUserByEmail(email string) (*User) {
+  users := findAllUsers()
   for _, user := range users {
     if user.Email == email {
-      return &user, nil
+      return &user
     }
   }
-  return nil, nil
+  return nil
 }
 
-func writeLastAssignment(user string) (error) {
-  conn, err := getConn()
-  if err != nil {
-    return err
-  }
+func writeLastAssignment(user string) {
+  conn := getConn()
   defer conn.Close()
   t := time.Now().UTC().Unix()
-  _, err = conn.Do("SET", user, fmt.Sprintf("%d", t))
-  return err
+  _, err := conn.Do("SET", user, fmt.Sprintf("%d", t))
+  if err != nil { panic(err) }
 }
 
-func getLastAssignment(user string) (int64, error) {
-  conn, err := getConn()
-  if err != nil {
-    return 0, err
-  }
+func getLastAssignment(user string) int64 {
+  conn := getConn()
   defer conn.Close()
   var t string
-  t, err = redis.String(conn.Do("GET", user))
-  if err != nil {
-    return 0, err
-  }
+  t, err := redis.String(conn.Do("GET", user))
+  if err != nil { panic(err) }
   var i int64
   i, err = strconv.ParseInt(t, 10, 64)
-  if err != nil {
-    return 0, err
-  }
-  return i, err
+  if err != nil { panic(err) }
+  return i
 }
 
-func getConn() (redis.Conn, error) {
+func getConn() (redis.Conn) {
   var conn redis.Conn
   parsedUrl, err := url.Parse(usersRedisUrl)
   conn, err = redis.Dial("tcp", parsedUrl.Host)
-  if err != nil {
-    return nil, err
-  }
-
+  if err != nil { panic(err) }
   if parsedUrl.User != nil {
     p,_ := parsedUrl.User.Password()
     _, err = conn.Do("AUTH", p)
-    if err != nil {
-      return nil, err
-    }
+    if err != nil { panic(err) }
   }
-  return conn, nil
+  return conn
 }
