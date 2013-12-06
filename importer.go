@@ -118,6 +118,7 @@ func assignNewOwnerToCard(trello *Trello, pagerduty *Pagerduty, card *TrelloCard
     // assign trello member to card 
     err := trello.assignMember(card.Id, trelloMember.Id)
     if err != nil { panic(err) }
+    // TODO: update LastAssignmentTime in redis
   }
 }
 
