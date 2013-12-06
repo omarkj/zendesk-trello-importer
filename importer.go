@@ -95,6 +95,8 @@ func assignNewOwnerToCard(trello *Trello, pagerduty *Pagerduty, card *TrelloCard
       assignee = *user
     }
   }
+  // TODO: update owner in zendesk
+
   trelloMember := trello.findMember(assignee.TrelloUsername)
   if trelloMember != nil {
     // assign trello member to card 
