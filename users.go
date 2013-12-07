@@ -4,7 +4,6 @@ import (
   "os"
   "time"
   "fmt"
-  "strconv"
   "net/url"
   "github.com/garyburd/redigo/redis"
 )
@@ -55,24 +54,12 @@ func findUserByEmail(email string) (*User) {
   return nil
 }
 
-func writeLastAssignment(user string) {
+func writeLastAssignment(user *User) {
   conn := getConn()
   defer conn.Close()
   t := time.Now().UTC().Unix()
-  _, err := conn.Do("SET", user, fmt.Sprintf("%d", t))
+  _, err := conn.Do("HSET", user.Email, "last_assignment", fmt.Sprintf("%d", t))
   if err != nil { panic(err) }
-}
-
-func getLastAssignment(user string) int64 {
-  conn := getConn()
-  defer conn.Close()
-  var t string
-  t, err := redis.String(conn.Do("GET", user))
-  if err != nil { panic(err) }
-  var i int64
-  i, err = strconv.ParseInt(t, 10, 64)
-  if err != nil { panic(err) }
-  return i
 }
 
 func getConn() (redis.Conn) {
