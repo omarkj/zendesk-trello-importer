@@ -64,7 +64,9 @@ func maybeAssignCardOwner(trello *Trello, zendesk *Zendesk, pagerduty *Pagerduty
   if assigneeId > 0 {
     assignExistingOwnerToCard(trello, zendesk, card, assigneeId)
   } else {
-    assignNewOwnerToCard(trello, pagerduty, card)
+    if len(card.IdMembers) == 0 {
+      assignNewOwnerToCard(trello, pagerduty, card)
+    }
   }
 }
 
@@ -73,6 +75,9 @@ func assignExistingOwnerToCard(trello *Trello, zendesk *Zendesk, card *TrelloCar
   if zendeskUser != nil {
     // lookup user mapping in redis
     user := findUserByEmail(zendeskUser.Email)
+    if user == nil {
+      panic(fmt.Sprintf("Zendesk user missing from redis config: %s", zendeskUser.Email))
+    }
     trelloMember := trello.findMember(user.TrelloUsername)
     if (trelloMember != nil && !trelloCardOwnerMatches(card, trelloMember)) {
       // assign trello member to card 
@@ -96,12 +101,13 @@ func assignNewOwnerToCard(trello *Trello, pagerduty *Pagerduty, card *TrelloCard
     }
   }
   // TODO: update owner in zendesk
+  // zendesk.updateTicketOwner()
 
   trelloMember := trello.findMember(assignee.TrelloUsername)
   if trelloMember != nil {
     // assign trello member to card 
     trello.assignMember(card.Id, trelloMember.Id)
-    // TODO: update LastAssignmentTime in redis
+    // update LastAssignmentTime in redis
     writeLastAssignment(&assignee)
   }
 }

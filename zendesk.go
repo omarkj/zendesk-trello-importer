@@ -1,6 +1,8 @@
 package main
 
 import (
+  "io"
+  "strings"
   "os"
   "fmt"
   "net/http"
@@ -44,6 +46,18 @@ type ZendeskView struct {
 type Zendesk struct {
   Users []ZendeskUser
   Tickets []ZendeskTicket 
+}
+
+type ZendeskUpdateResponse struct {
+  Ticket interface{}
+}
+
+type ZendeskAssigneeMsg struct {
+  Assignee_Id int64
+}
+
+type ZendeskUpdateMsg struct {
+  Ticket ZendeskAssigneeMsg
 }
 
 // blocking function that fetches users and tickets
@@ -100,6 +114,15 @@ func (z *Zendesk) findUser(id int64) *ZendeskUser {
   return nil
 }
 
+func (z *Zendesk) updateTicketOwner(id int64) {
+  path := fmt.Sprintf("/api/v2/tickets/%d.json", id)
+  b, err := json.Marshal(ZendeskUpdateMsg{ZendeskAssigneeMsg{id}})
+  content := zendeskApiCall("PUT", path, b)
+  resp := &ZendeskUpdateResponse{}
+  err = json.Unmarshal(content, &resp)
+  if err != nil { panic(err) }
+}
+
 func zendeskApiGet(path string) ([]byte) {
   var client = http.Client{}
   req, err := http.NewRequest("GET", path, nil)
@@ -109,5 +132,30 @@ func zendeskApiGet(path string) ([]byte) {
   defer resp.Body.Close()
   body, err := ioutil.ReadAll(resp.Body)
   if err != nil { panic(err) }
+  return body
+}
+
+func zendeskApiCall(method string, path string, b []byte) ([]byte) {
+  var client = http.Client{}
+  url := fmt.Sprintf("%s%s", zendeskApiUrl, path)
+  var form io.Reader = nil
+  if b != nil {
+    form = strings.NewReader(string(b))
+  }
+  req, err := http.NewRequest(method, url, form)
+  if err != nil {
+    panic(err)
+  }
+  req.SetBasicAuth(fmt.Sprintf("%s/token", zendeskUsername), zendeskToken)
+  req.Header.Set("Content-Type", "Content-Type: application/json")
+  resp, err := client.Do(req)
+  if err != nil {
+    panic(err)
+  }
+  defer resp.Body.Close()
+  body, err := ioutil.ReadAll(resp.Body)
+  if err != nil {
+    panic(err)
+  }
   return body
 }
