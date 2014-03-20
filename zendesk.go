@@ -114,12 +114,21 @@ func (z *Zendesk) findUser(id int64) *ZendeskUser {
   return nil
 }
 
-func (z *Zendesk) updateTicketOwner(id int64) {
-  path := fmt.Sprintf("/api/v2/tickets/%d.json", id)
-  b, err := json.Marshal(ZendeskUpdateMsg{ZendeskAssigneeMsg{id}})
-  content := zendeskApiCall("PUT", path, b)
+func (z*Zendesk) findUserByEmail(email string) *ZendeskUser {
+  for _, user := range z.Users {
+    if user.Email == email {
+      return &user
+    }
+  }
+  return nil
+}
+
+func (z *Zendesk) updateTicketOwner(ticketId int64, AssigneeId int64) {
+  path := fmt.Sprintf("/api/v2/tickets/%d.json", ticketId)
+  b := fmt.Sprintf("{\"ticket\":{\"assignee_id\":%d}}", AssigneeId)
+  content := zendeskApiCall("PUT", path, []byte(b))
   resp := &ZendeskUpdateResponse{}
-  err = json.Unmarshal(content, &resp)
+  err := json.Unmarshal(content, &resp)
   if err != nil { panic(err) }
 }
 
@@ -147,7 +156,7 @@ func zendeskApiCall(method string, path string, b []byte) ([]byte) {
     panic(err)
   }
   req.SetBasicAuth(fmt.Sprintf("%s/token", zendeskUsername), zendeskToken)
-  req.Header.Set("Content-Type", "Content-Type: application/json")
+  req.Header.Set("Content-Type", "application/json")
   resp, err := client.Do(req)
   if err != nil {
     panic(err)

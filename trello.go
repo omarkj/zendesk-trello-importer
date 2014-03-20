@@ -91,6 +91,15 @@ func (t *Trello) findMember(username string) (*TrelloMember) {
   return nil
 }
 
+func (t *Trello) findMemberById(id string) *TrelloMember {
+  for _, m := range t.Members {
+    if m.Id == id {
+      return &m
+    }
+  }
+  return nil
+}
+
 func (t *Trello) createCard(id int64, status string, desc string) (*TrelloCard) {
   name := fmt.Sprintf("Ticket #%d (%s)", id, status)
   card := &TrelloCard{Name: name}

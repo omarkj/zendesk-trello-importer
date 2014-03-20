@@ -54,6 +54,17 @@ func findUserByEmail(email string) (*User) {
   return nil
 }
 
+func findUserByTrelloUsername(username string) (*User) {
+  users := findAllUsers()
+  for _, user := range users {
+    if user.TrelloUsername == username {
+      return &user
+    }
+  }
+  return nil
+}
+
+
 func writeLastAssignment(user *User) {
   conn := getConn()
   defer conn.Close()
